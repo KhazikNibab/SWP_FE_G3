@@ -88,11 +88,11 @@ const LoginPage = () => {
       if (foundUser) {
         console.log("Login successful");
         // Store user data in localStorage
-        localStorage.setItem('user', JSON.stringify(foundUser));
+        localStorage.setItem("user", JSON.stringify(foundUser));
         setModal({ show: true, message: "Login successful", isError: false });
         // Navigate to admin dashboard after a short delay
         setTimeout(() => {
-          navigate('/admin');
+          navigate("/admin");
         }, 1500);
       } else {
         setModal({
