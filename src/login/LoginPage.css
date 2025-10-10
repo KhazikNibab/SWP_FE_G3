@@ -1,0 +1,213 @@
+/*
+  LoginPage.css
+  I've adjusted the padding rules to make the email and password fields align perfectly.
+*/
+
+.login-page-container {
+    display: flex;
+    width: 100vw;
+    height: 100vh;
+    font-family: 'Inter', sans-serif;
+    background-color: #ffffff;
+}
+
+/* Left Side: The Form */
+.login-form-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4rem 2rem;
+    max-width: 600px;
+}
+
+.form-content {
+    width: 100%;
+    max-width: 400px;
+}
+
+.login-header {
+    text-align: center;
+    margin-bottom: 2.5rem;
+}
+
+.logo-icon {
+    width: 48px;
+    height: 48px;
+    color: #007aff;
+    margin-bottom: 0.5rem;
+}
+
+.login-header h1 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #1d2939;
+}
+
+.login-header p {
+    margin-top: 0.5rem;
+    font-size: 1rem;
+    color: #667085;
+}
+
+.input-wrapper {
+    margin-bottom: 1.5rem;
+}
+
+.input-wrapper label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #344054;
+    margin-bottom: 0.5rem;
+}
+
+/* Email field styling - shorter to match password field */
+.input-wrapper:not(.password-input-container) input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.05);
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+/* Password field styling - maintains space for toggle icon */
+.password-input-container input {
+    width: 100%;
+    padding: 0.75rem 3rem 0.75rem 1rem;
+    font-size: 1rem;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.05);
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.input-wrapper input:focus {
+    outline: none;
+    border-color: #007aff;
+    box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.2);
+}
+
+.form-actions {
+    text-align: right;
+    margin-bottom: 1.5rem;
+}
+
+.forgot-password-link {
+    font-size: 0.875rem;
+    color: #007aff;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.forgot-password-link:hover {
+    text-decoration: underline;
+}
+
+.login-button {
+    width: 100%;
+    padding: 0.875rem;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #ffffff;
+    background-color: #007aff;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.login-button:hover {
+    background-color: #005ecb;
+}
+
+.form-footer {
+    font-size: 0.75rem;
+    color: #98a2b3;
+}
+
+/* Right Side: The Showcase Image */
+.login-showcase-section {
+    flex: 1.5;
+    background-image: url('https://images.unsplash.com/photo-1617704548623-340376564e68?auto=format&fit=crop&q=80&w=2787');
+    background-size: cover;
+    background-position: center;
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    padding: 4rem;
+}
+
+.showcase-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0.1) 0%, rgba(0, 0, 0, 0.7) 100%);
+    color: #ffffff;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 4rem;
+    box-sizing: border-box;
+}
+
+.showcase-overlay h2 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+}
+
+.showcase-overlay p {
+    font-size: 1.125rem;
+    max-width: 500px;
+    line-height: 1.6;
+}
+
+/* Responsive Design */
+@media (max-width: 992px) {
+    .login-showcase-section {
+        display: none;
+    }
+
+    .login-form-section {
+        flex: 1;
+        max-width: none;
+        justify-content: center;
+    }
+}
+
+/* Styles for the password toggle icon */
+.password-input-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.toggle-password-span {
+    position: absolute;
+    right: 0.875rem;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    display: flex;
+    color: #98a2b3;
+}
+
+.toggle-password-span:hover {
+    color: #344054;
+}
+
+.toggle-password-icon {
+    width: 1.25rem;
+    height: 1.25rem;
+}
+
+/* Đảm bảo input email có padding phải giống password */
+.input-wrapper input[type="email"] {
+    padding-right: 0rem;
+}
