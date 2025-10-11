@@ -10,6 +10,7 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import Dashboard from "./components/dashboard";
 import ManageBike from "./pages/bike";
 import ManageCategory from "./pages/category";
+import { ToastContainer } from "react-toastify";
 
 function App() {
   const router = createBrowserRouter([
@@ -30,7 +31,10 @@ function App() {
   ]);
 
   return (
-    <RouterProvider router={router} />
+    <>
+      <ToastContainer />
+      <RouterProvider router={router} />
+    </>
     // <Router>
     //   <div className="App">
     //     <Routes>
