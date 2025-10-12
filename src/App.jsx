@@ -12,11 +12,12 @@ import ManageBike from "./pages/bike";
 import ManageCategory from "./pages/category";
 import { ToastContainer } from "react-toastify";
 import LoginPage from "./pages/login";
+import HomePage from "./pages/home";
 
 function App() {
   const router = createBrowserRouter([
     {
-      path: "/",
+      path: "/dashboard",
       element: <Dashboard />,
       children: [
         {
@@ -28,6 +29,10 @@ function App() {
           element: <ManageCategory />, //outlet
         },
       ],
+    },
+    {
+      path: "/",
+      element: <HomePage />,
     },
     {
       path: "/login",

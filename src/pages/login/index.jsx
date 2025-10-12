@@ -27,7 +27,7 @@ function LoginPage() {
   // --- Component State ---
   const [isLoading, setIsLoading] = useState(false);
   // Sử dụng message API của AntD để hiển thị thông báo động
-  const [contextHolder] = message.useMessage();
+  const [messageApi, contextHolder] = message.useMessage();
   const [form] = Form.useForm(); // Hook để tương tác với form
   const navigate = useNavigate();
 
