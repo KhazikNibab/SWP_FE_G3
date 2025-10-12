@@ -11,6 +11,7 @@ import Dashboard from "./components/dashboard";
 import ManageBike from "./pages/bike";
 import ManageCategory from "./pages/category";
 import { ToastContainer } from "react-toastify";
+import LoginPage from "./pages/login";
 
 function App() {
   const router = createBrowserRouter([
@@ -20,13 +21,17 @@ function App() {
       children: [
         {
           path: "bike",
-          element: <ManageBike />,
+          element: <ManageBike />, //outlet
         },
         {
           path: "category",
-          element: <ManageCategory />,
+          element: <ManageCategory />, //outlet
         },
       ],
+    },
+    {
+      path: "/login",
+      element: <LoginPage />,
     },
   ]);
 
@@ -35,13 +40,6 @@ function App() {
       <ToastContainer />
       <RouterProvider router={router} />
     </>
-    // <Router>
-    //   <div className="App">
-    //     <Routes>
-    //       <Route path="/" element={<LoginPage />} />
-    //     </Routes>
-    //   </div>
-    // </Router>
   );
 }
 

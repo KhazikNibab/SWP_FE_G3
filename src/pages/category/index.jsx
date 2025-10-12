@@ -1,4 +1,4 @@
-import { Button, Input, Modal, Table, Form } from "antd";
+import { Button, Input, Modal, Table, Form, Popconfirm } from "antd";
 import { useForm } from "antd/es/form/Form";
 import axios from "axios";
 import React, { useEffect, useState } from "react";
@@ -41,9 +41,23 @@ const ManageCategory = () => {
             >
               Edit
             </Button>
-            <Button type="primary" danger>
-              Delete
-            </Button>
+
+            <Popconfirm
+              title="Delete category"
+              onConfirm={async () => {
+                console.log(`start deletion with id ${id}`);
+                await axios.delete(
+                  `https://68e9fe44f1eeb3f856e5b17c.mockapi.io/categories/${id}`
+                );
+
+                fetchCategories();
+                toast.success("delete successfully");
+              }}
+            >
+              <Button type="primary" danger>
+                Delete
+              </Button>
+            </Popconfirm>
           </>
         );
       },
@@ -63,20 +77,23 @@ const ManageCategory = () => {
 
   const handleSubmitForm = async (values) => {
     const { id } = values;
+    const { name } = values;
     let res;
 
     if (id) {
       //update
       res = await axios.put(
-        "https://68e9fe44f1eeb3f856e5b17c.mockapi.io/categories",
+        `https://68e9fe44f1eeb3f856e5b17c.mockapi.io/categories/${id}`,
         values
       );
+      toast.success(`edit ${name} successfully`);
     } else {
       //create new
       res = await axios.post(
         "https://68e9fe44f1eeb3f856e5b17c.mockapi.io/categories",
         values
       );
+      toast.success("successfully create new category");
     }
 
     console.log(values);
@@ -88,7 +105,6 @@ const ManageCategory = () => {
     setOpen(false);
     fetchCategories();
     form.resetFields();
-    toast.success("successfully create new category");
   };
 
   useEffect(() => {
