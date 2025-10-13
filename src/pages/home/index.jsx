@@ -1,5 +1,5 @@
 // src/HomePage.js
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { motion, useAnimation, AnimatePresence } from "framer-motion"; // <-- AnimatePresence is new
 import { useInView } from "react-intersection-observer";
 import evImage from "../../assets/ev.jpg";
@@ -13,28 +13,14 @@ import {
   FiLogOut, // <-- New icon
 } from "react-icons/fi";
 import { Link } from "react-router-dom";
-import useSelection from "antd/es/table/hooks/useSelection";
-import { useSelector } from "react-redux";
-import { store } from "../../redux/store";
+import { useSelector, useDispatch } from "react-redux";
+import { logout } from "../../redux/accountSlice";
 
-// Main Page Component (UPDATED with state)
+// Main Page Component (uses redux account state)
+// reference motion to satisfy some linters that expect it to be used
+void motion;
+
 const HomePage = () => {
-  const [user, setUser] = useState(null);
-
-  // Mock login function
-  const handleLogin = () => {
-    setUser({
-      name: "Alex Reid",
-      avatarUrl:
-        "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=2080&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-    });
-  };
-
-  // Mock logout function
-  const handleLogout = () => {
-    setUser(null);
-  };
-
   return (
     <div
       className="bg-slate-900 text-white font-sans overflow-x-hidden"
@@ -42,7 +28,7 @@ const HomePage = () => {
         backgroundImage: "radial-gradient(circle at top, #1e293b, #0f172a 30%)",
       }}
     >
-      <Header user={user} onLogin={handleLogin} onLogout={handleLogout} />
+      <Header />
       <main>
         <HeroSection />
         <FeaturesSection />
@@ -56,7 +42,13 @@ const HomePage = () => {
 };
 
 // 1. Header Component (COMPLETE OVERHAUL)
-const Header = ({ user, onLogin, onLogout }) => {
+const Header = () => {
+  const account = useSelector((store) => store.account);
+  const dispatch = useDispatch();
+
+  const handleLogout = () => {
+    dispatch(logout());
+  };
 
   return (
     <header className="sticky top-0 bg-slate-900/80 backdrop-blur-md z-50 border-b border-slate-800">
@@ -71,12 +63,12 @@ const Header = ({ user, onLogin, onLogout }) => {
           >
             Features
           </a>
-          <a
-            href="#testimonials"
+          <Link
+            to="/manageAccount"
             className="hover:text-sky-400 transition-colors duration-300"
           >
-            Testimonials
-          </a>
+            Manage Account
+          </Link>
           <a
             href="#"
             className="hover:text-sky-400 transition-colors duration-300"
@@ -88,7 +80,7 @@ const Header = ({ user, onLogin, onLogout }) => {
         {/* Conditional rendering for Login/User Profile */}
         <div className="flex items-center space-x-4">
           <AnimatePresence mode="wait">
-            {user ? (
+            {account ? (
               // -- LOGGED IN STATE --
               <motion.div
                 key="user-profile"
@@ -99,16 +91,16 @@ const Header = ({ user, onLogin, onLogout }) => {
                 className="flex items-center space-x-4"
               >
                 <span className="font-medium text-slate-300 hidden sm:block">
-                  Welcome, {user.name.split(" ")[0]}
+                  Welcome, {account.userId} ({account.role})
                 </span>
                 <motion.img
-                  src={user.avatarUrl}
-                  alt={user.name}
+                  src={account.avatarUrl}
+                  alt={account.name}
                   className="w-10 h-10 rounded-full border-2 border-sky-400 object-cover"
                   whileHover={{ scale: 1.1, rotate: 5 }}
                 />
                 <motion.button
-                  onClick={onLogout}
+                  onClick={handleLogout}
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
                   className="p-2 rounded-full hover:bg-slate-700 transition-colors"
@@ -127,8 +119,8 @@ const Header = ({ user, onLogin, onLogout }) => {
                 transition={{ duration: 0.3 }}
                 className="flex items-center space-x-4"
               >
-                <Link to='/login'
-                  onClick={onLogin}
+                <Link
+                  to="/login"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   className="font-bold py-2 px-5 rounded-lg hover:bg-slate-800 transition-all duration-300"
@@ -390,8 +382,9 @@ const testimonials = [
 
 const DotButton = ({ selected, onClick }) => (
   <button
-    className={`w-3 h-3 rounded-full mx-1 transition-all duration-300 ${selected ? "bg-sky-400 scale-125" : "bg-slate-600"
-      }`}
+    className={`w-3 h-3 rounded-full mx-1 transition-all duration-300 ${
+      selected ? "bg-sky-400 scale-125" : "bg-slate-600"
+    }`}
     type="button"
     onClick={onClick}
   />

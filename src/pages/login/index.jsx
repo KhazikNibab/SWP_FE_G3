@@ -29,7 +29,7 @@ function LoginPage() {
   // --- Component State ---
   const [isLoading, setIsLoading] = useState(false);
   // Sử dụng message API của AntD để hiển thị thông báo động
-  const [messageApi, contextHolder] = message.useMessage();
+  const [, contextHolder] = message.useMessage();
   const [form] = Form.useForm(); // Hook để tương tác với form
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -43,18 +43,13 @@ function LoginPage() {
     try {
       const res = await api.post("/auth/login", values);
       toast.success("Successfully log in");
-      // navigate("/login");
       console.log(res.data);
       const { role } = res.data;
       localStorage.setItem("role", role);
 
-      // store the state of login 
-      dispatch(login(res.data))
-      navigate("/")
-
-
-
-
+      // store the state of login
+      dispatch(login(res.data));
+      navigate("/");
     } catch (e) {
       message.error("login failed, please try again" + e);
     } finally {

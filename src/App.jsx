@@ -13,6 +13,7 @@ import ManageCategory from "./pages/category";
 import { ToastContainer } from "react-toastify";
 import LoginPage from "./pages/login";
 import HomePage from "./pages/home";
+import AccountManagementPage from "./pages/account";
 
 function App() {
   const router = createBrowserRouter([
@@ -33,10 +34,15 @@ function App() {
     {
       path: "/",
       element: <HomePage />,
+      // element: <AccountManagementPage />,
     },
     {
       path: "/login",
       element: <LoginPage />,
+    },
+    {
+      path: "/manageAccount",
+      element: <AccountManagementPage />,
     },
   ]);
 
