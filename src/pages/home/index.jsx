@@ -12,6 +12,7 @@ import {
   FiDollarSign,
   FiLogOut, // <-- New icon
 } from "react-icons/fi";
+import { Link } from "react-router-dom";
 
 // Main Page Component (UPDATED with state)
 const HomePage = () => {
@@ -122,14 +123,14 @@ const Header = ({ user, onLogin, onLogout }) => {
                 transition={{ duration: 0.3 }}
                 className="flex items-center space-x-4"
               >
-                <motion.button
+                <Link to='/login'
                   onClick={onLogin}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   className="font-bold py-2 px-5 rounded-lg hover:bg-slate-800 transition-all duration-300"
                 >
                   Login
-                </motion.button>
+                </Link>
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
@@ -385,9 +386,8 @@ const testimonials = [
 
 const DotButton = ({ selected, onClick }) => (
   <button
-    className={`w-3 h-3 rounded-full mx-1 transition-all duration-300 ${
-      selected ? "bg-sky-400 scale-125" : "bg-slate-600"
-    }`}
+    className={`w-3 h-3 rounded-full mx-1 transition-all duration-300 ${selected ? "bg-sky-400 scale-125" : "bg-slate-600"
+      }`}
     type="button"
     onClick={onClick}
   />

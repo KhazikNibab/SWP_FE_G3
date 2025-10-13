@@ -20,6 +20,8 @@ import {
 import api from "../../config/axios";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import { useDispatch } from "react-redux";
+import { login } from "../../redux/accountSlice";
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -30,6 +32,7 @@ function LoginPage() {
   const [messageApi, contextHolder] = message.useMessage();
   const [form] = Form.useForm(); // Hook để tương tác với form
   const navigate = useNavigate();
+  const dispatch = useDispatch();
 
   // --- Event Handlers ---
   // onFinish sẽ được gọi khi form được submit và đã qua validation thành công
@@ -42,6 +45,14 @@ function LoginPage() {
       toast.success("Successfully log in");
       navigate("/login");
       console.log(res.data);
+      const { role } = res.data;
+      localStorage.setItem("role", role);
+
+      // store the state of login 
+      dispatch(login(res.data))
+
+
+
     } catch (e) {
       message.error("login failed, please try again" + e);
     } finally {
