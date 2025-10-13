@@ -43,13 +43,15 @@ function LoginPage() {
     try {
       const res = await api.post("/auth/login", values);
       toast.success("Successfully log in");
-      navigate("/login");
+      // navigate("/login");
       console.log(res.data);
       const { role } = res.data;
       localStorage.setItem("role", role);
 
       // store the state of login 
       dispatch(login(res.data))
+      navigate("/")
+
 
 
 

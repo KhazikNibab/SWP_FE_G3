@@ -13,6 +13,9 @@ import {
   FiLogOut, // <-- New icon
 } from "react-icons/fi";
 import { Link } from "react-router-dom";
+import useSelection from "antd/es/table/hooks/useSelection";
+import { useSelector } from "react-redux";
+import { store } from "../../redux/store";
 
 // Main Page Component (UPDATED with state)
 const HomePage = () => {
@@ -54,6 +57,7 @@ const HomePage = () => {
 
 // 1. Header Component (COMPLETE OVERHAUL)
 const Header = ({ user, onLogin, onLogout }) => {
+
   return (
     <header className="sticky top-0 bg-slate-900/80 backdrop-blur-md z-50 border-b border-slate-800">
       <nav className="container mx-auto px-6 py-3 flex justify-between items-center">
