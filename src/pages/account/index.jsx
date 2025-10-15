@@ -1,5 +1,9 @@
-// src/AccountManagementPage.js
-import React, { useState } from "react";
+// src/pages/account/index.jsx
+// Full CRUD page for managing user accounts, intended for ADMIN users.
+// This page is designed to be rendered inside the shared Dashboard layout.
+// It uses the preconfigured axios `api` instance (with token + ngrok headers).
+
+import React, { useEffect, useState } from "react";
 import {
   Layout,
   Table,
@@ -11,154 +15,130 @@ import {
   Popconfirm,
   message,
   Typography,
-  Menu,
+  Select,
 } from "antd";
-import {
-  UserOutlined,
-  PlusOutlined,
-  EditOutlined,
-  DeleteOutlined,
-  ReloadOutlined,
-  TeamOutlined,
-} from "@ant-design/icons";
-import { motion, AnimatePresence } from "framer-motion";
+import api from "../../config/axios";
 
-const { Header, Content, Sider } = Layout;
 const { Title } = Typography;
 
-// --- Mock Data ---
-// In a real application, this would come from an API
-const initialUsers = [
-  {
-    msnv: "EMP1001",
-    email: "EMP1001@evmotion.com",
-    phone: "123-456-7890",
-    role: "Sales Manager",
-  },
-  {
-    msnv: "EMP1002",
-    email: "EMP1002@evmotion.com",
-    phone: "234-567-8901",
-    role: "Technician",
-  },
-  {
-    msnv: "EMP1003",
-    email: "EMP1003@evmotion.com",
-    phone: "345-678-9012",
-    role: "Finance Officer",
-  },
-  {
-    msnv: "EMP1004",
-    email: "EMP1004@evmotion.com",
-    phone: "456-789-0123",
-    role: "Sales Associate",
-  },
-];
-
-// --- Helper Function ---
-const generatePassword = () => {
-  const length = 10;
-  const charset =
-    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()";
-  let retVal = "";
-  for (let i = 0, n = charset.length; i < length; ++i) {
-    retVal += charset.charAt(Math.floor(Math.random() * n));
-  }
-  return retVal;
-};
+// NOTE: Endpoints are assumed as /accounts with
+// - GET    /accounts               -> list accounts (array)
+// - POST   /accounts               -> create account (body)
+// - PUT    /accounts/:userId       -> update account by userId
+// - DELETE /accounts/:userId       -> delete account by userId
+// If your backend differs, adjust the paths/fields below.
 
 const AccountManagementPage = () => {
-  const [users, setUsers] = useState(initialUsers);
+  const [accounts, setAccounts] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState(null);
+  const [editing, setEditing] = useState(null); // holds the row being edited (or null for create)
   const [form] = Form.useForm();
 
-  // --- Modal and Form Handlers ---
+  const fetchAccounts = async () => {
+    setLoading(true);
+    try {
+      const res = await api.get("/accounts");
+      const data = res?.data;
+      if (!Array.isArray(data)) {
+        message.error("Unexpected response from /accounts (expected an array)");
+        setAccounts([]);
+        return;
+      }
+      setAccounts(data);
+    } catch (err) {
+      console.error("Failed to fetch accounts", err);
+      message.error("Failed to load accounts");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const showAddModal = () => {
-    setEditingUser(null);
+  useEffect(() => {
+    fetchAccounts();
+  }, []);
+
+  // You can derive role options here if you add role-based filters in the future.
+
+  const onAdd = () => {
+    setEditing(null);
     form.resetFields();
     setIsModalOpen(true);
   };
 
-  const showEditModal = (user) => {
-    setEditingUser(user);
-    form.setFieldsValue(user);
+  const onEdit = (record) => {
+    setEditing(record);
+    form.setFieldsValue(record);
     setIsModalOpen(true);
   };
 
-  const handleCancel = () => {
-    setIsModalOpen(false);
-    setEditingUser(null);
-  };
-
-  const handleFormSubmit = async () => {
+  const onDelete = async (userId) => {
     try {
-      const values = await form.validateFields();
-
-      if (editingUser) {
-        // --- Update Logic ---
-        setUsers(
-          users.map((user) =>
-            user.msnv === editingUser.msnv ? { ...user, ...values } : user
-          )
-        );
-        message.success("Account updated successfully!");
-      } else {
-        // --- Create Logic ---
-        if (users.some((user) => user.msnv === values.msnv)) {
-          message.error("Employee ID (MSNV) already exists!");
-          return;
-        }
-        setUsers([{ ...values, role: "New Role" }, ...users]); // Add to the top of the list
-        message.success("Account created successfully!");
-      }
-      setIsModalOpen(false);
-      setEditingUser(null);
-    } catch (error) {
-      console.log("Validation Failed:", error);
+      await api.delete(`/accounts/${encodeURIComponent(userId)}`);
+      message.success("Account deleted");
+      fetchAccounts();
+    } catch (err) {
+      console.error("Delete failed", err);
+      message.error("Failed to delete account");
     }
   };
 
-  const handleDelete = (msnv) => {
-    setUsers(users.filter((user) => user.msnv !== msnv));
-    message.success("Account deleted successfully!");
+  const onSubmit = async () => {
+    try {
+      const values = await form.validateFields();
+      // Expected fields: userId, name, email, phone, role
+      if (editing) {
+        await api.put(
+          `/accounts/${encodeURIComponent(editing.userId)}`,
+          values
+        );
+        message.success("Account updated");
+      } else {
+        await api.post("/accounts", values);
+        message.success("Account created");
+      }
+      setIsModalOpen(false);
+      setEditing(null);
+      fetchAccounts();
+    } catch (err) {
+      if (err?.errorFields) {
+        // validation error from form, already displayed
+        return;
+      }
+      console.error("Submit failed", err);
+      message.error("Failed to save account");
+    }
   };
-
-  const handleAutoGeneratePassword = () => {
-    const newPassword = generatePassword();
-    form.setFieldsValue({ password: newPassword });
-    message.info("New password generated!");
-  };
-
-  // --- Table Column Definitions ---
 
   const columns = [
     {
-      title: "Employee ID (MSNV)",
-      dataIndex: "msnv",
-      key: "msnv",
-      sorter: (a, b) => a.msnv.localeCompare(b.msnv),
+      title: "User ID",
+      dataIndex: "userId",
+      key: "userId",
+      sorter: (a, b) => String(a.userId).localeCompare(String(b.userId)),
+    },
+    {
+      title: "Name",
+      dataIndex: "name",
+      key: "name",
+      sorter: (a, b) => String(a.name).localeCompare(String(b.name)),
     },
     { title: "Email", dataIndex: "email", key: "email" },
-    { title: "Phone Number", dataIndex: "phone", key: "phone" },
+    { title: "Phone", dataIndex: "phone", key: "phone" },
     { title: "Role", dataIndex: "role", key: "role" },
     {
       title: "Actions",
       key: "actions",
       render: (_, record) => (
-        <Space size="middle">
-          <Button icon={<EditOutlined />} onClick={() => showEditModal(record)}>
+        <Space>
+          <Button type="link" onClick={() => onEdit(record)}>
             Edit
           </Button>
           <Popconfirm
-            title="Delete the account"
-            description="Are you sure you want to delete this account?"
-            onConfirm={() => handleDelete(record.msnv)}
-            okText="Yes"
-            cancelText="No"
+            title="Delete this account?"
+            onConfirm={() => onDelete(record.userId)}
           >
-            <Button icon={<DeleteOutlined />} danger>
+            <Button type="link" danger>
               Delete
             </Button>
           </Popconfirm>
@@ -168,86 +148,59 @@ const AccountManagementPage = () => {
   ];
 
   return (
-    <Layout className="max-h-screen bg-slate-100">
-      <Sider width={220} className="!bg-slate-800">
-        <div className="h-16 flex items-center justify-center text-white text-2xl font-bold">
-          <span className="font-light text-sky-400">EV</span>Motion
-        </div>
-        <Menu
-          theme="dark"
-          mode="inline"
-          defaultSelectedKeys={["1"]}
-          className="!bg-slate-800"
-          items={[
-            { key: "1", icon: <TeamOutlined />, label: "Account Management" },
-            // Add other admin links here
-          ]}
-        />
-      </Sider>
-      <Layout>
-        <Header className="!bg-white !p-0 border-b border-slate-200">
-          <div className="flex justify-between items-center h-full px-6">
-            <Title level={3} className="!mb-0">
-              Admin Dashboard
-            </Title>
-            <div className="flex items-center space-x-4">
-              <span>Admin User</span>
-              <UserOutlined className="text-xl" />
-            </div>
-          </div>
-        </Header>
-        <Content className="m-6">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="p-6 bg-white rounded-lg shadow-sm"
-          >
-            <div className="flex justify-between items-center mb-6">
-              <Title level={4} className="!mb-0">
-                User Account Management
-              </Title>
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                size="large"
-                onClick={showAddModal}
-              >
-                Add New Account
-              </Button>
-            </div>
-            <Table columns={columns} dataSource={users} rowKey="msnv" />
-          </motion.div>
-        </Content>
-      </Layout>
-
-      {/* --- Add/Edit Modal --- */}
-      <Modal
-        title={
-          <Title level={4}>
-            {editingUser ? "Edit Account" : "Provision New Account"}
-          </Title>
-        }
-        open={isModalOpen}
-        onOk={handleFormSubmit}
-        onCancel={handleCancel}
-        okText={editingUser ? "Save Changes" : "Create Account"}
-        destroyOnClose
+    <Layout style={{ background: "transparent" }}>
+      {/*
+				Rendered inside Dashboard, so the top header + sider are provided by the layout.
+				This page only renders the content area for managing accounts.
+			*/}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: 16,
+        }}
       >
-        <Form
-          form={form}
-          layout="vertical"
-          name="accountForm"
-          initialValues={{ remember: true }}
-        >
+        <Title level={4} style={{ margin: 0 }}>
+          User Account Management
+        </Title>
+        <Button type="primary" onClick={onAdd}>
+          Add Account
+        </Button>
+      </div>
+
+      <Table
+        rowKey="userId"
+        loading={loading}
+        dataSource={accounts}
+        columns={columns}
+      />
+
+      <Modal
+        title={editing ? "Edit Account" : "Add Account"}
+        open={isModalOpen}
+        onOk={onSubmit}
+        onCancel={() => {
+          setIsModalOpen(false);
+          setEditing(null);
+        }}
+        okText="Save"
+      >
+        <Form form={form} layout="vertical">
+          {/* userId is editable when creating; disabled in edit mode to avoid ID changes. */}
           <Form.Item
-            name="msnv"
-            label="Employee ID (MSNV)"
-            rules={[
-              { required: true, message: "Please input the Employee ID!" },
-            ]}
+            name="userId"
+            label="User ID"
+            rules={[{ required: true, message: "Please enter the user ID" }]}
           >
-            <Input disabled={!!editingUser} placeholder="e.g., EMP1005" />
+            <Input disabled={!!editing} />
+          </Form.Item>
+          <Form.Item
+            name="name"
+            label="Name"
+            rules={[{ required: true, message: "Please enter the name" }]}
+          >
+            <Input />
           </Form.Item>
           <Form.Item
             name="email"
@@ -256,45 +209,34 @@ const AccountManagementPage = () => {
               {
                 required: true,
                 type: "email",
-                message: "Please input a valid email!",
+                message: "Please enter a valid email",
               },
             ]}
           >
-            <Input placeholder="e.g., user@evmotion.com" />
+            <Input />
           </Form.Item>
           <Form.Item
             name="phone"
-            label="Phone Number"
-            rules={[
-              { required: true, message: "Please input the phone number!" },
-            ]}
+            label="Phone"
+            rules={[{ required: true, message: "Please enter the phone" }]}
           >
-            <Input placeholder="e.g., 555-123-4567" />
+            <Input />
           </Form.Item>
-          {!editingUser && ( // Only show password field on create
-            <Form.Item label="Initial Password" required>
-              <Space.Compact className="w-full">
-                <Form.Item
-                  name="password"
-                  noStyle
-                  rules={[
-                    {
-                      required: true,
-                      message: "Please provide an initial password!",
-                    },
-                  ]}
-                >
-                  <Input.Password placeholder="Enter or generate a password" />
-                </Form.Item>
-                <Button
-                  icon={<ReloadOutlined />}
-                  onClick={handleAutoGeneratePassword}
-                >
-                  Generate
-                </Button>
-              </Space.Compact>
-            </Form.Item>
-          )}
+          <Form.Item
+            name="role"
+            label="Role"
+            rules={[{ required: true, message: "Please select a role" }]}
+          >
+            <Select
+              placeholder="Select role"
+              options={[
+                { value: "ADMIN", label: "ADMIN" },
+                { value: "DEALER_STAFF", label: "DEALER_STAFF" },
+                { value: "EVM_STAFF", label: "EVM_STAFF" },
+              ]}
+            />
+          </Form.Item>
+          {/* If your backend requires password on create, add it here (and hide on edit). */}
         </Form>
       </Modal>
     </Layout>

@@ -6,14 +6,18 @@
 //   Navigate,
 // } from "react-router-dom";
 // import LoginPage from "./components/login/LoginPage";
-import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import {
+  createBrowserRouter,
+  RouterProvider,
+  Navigate,
+} from "react-router-dom";
 import Dashboard from "./components/dashboard";
-import ManageBike from "./pages/bike";
 import ManageCategory from "./pages/category";
 import { ToastContainer } from "react-toastify";
 import LoginPage from "./pages/login";
 import HomePage from "./pages/home";
 import AccountManagementPage from "./pages/account";
+import ManageCar from "./pages/car";
 
 function App() {
   const router = createBrowserRouter([
@@ -21,13 +25,21 @@ function App() {
       path: "/dashboard",
       element: <Dashboard />,
       children: [
+        // When someone visits /dashboard directly, immediately redirect to
+        // the default child page 'car' so the Manage Car content is mounted
+        // and fetches data on load.
+        { index: true, element: <Navigate to="car" replace /> },
         {
-          path: "bike",
-          element: <ManageBike />, //outlet
+          path: "car",
+          element: <ManageCar />, //outlet
         },
         {
           path: "category",
           element: <ManageCategory />, //outlet
+        },
+        {
+          path: "accounts",
+          element: <AccountManagementPage />, // Admin account management
         },
       ],
     },
@@ -41,8 +53,10 @@ function App() {
       element: <LoginPage />,
     },
     {
+      // Legacy path kept for backward compatibility. Redirect to the new
+      // nested route inside Dashboard so the shared layout is used.
       path: "/manageAccount",
-      element: <AccountManagementPage />,
+      element: <Navigate to="/dashboard/accounts" replace />,
     },
   ]);
 

@@ -44,14 +44,49 @@ function LoginPage() {
       const res = await api.post("/auth/login", values);
       toast.success("Successfully log in");
       console.log(res.data);
-      const { role } = res.data;
+      const { role, token } = res.data;
+
+      // Persist full account (slice will also persist) so other pages can
+      // read role/token as needed. We already dispatch login which saves
+      // the account in the slice/localStorage; keep a separate 'role' key
+      // if other non-Redux code reads it.
       localStorage.setItem("role", role);
 
-      // store the state of login
+      // If token provided, ensure axios will send it on subsequent requests
+      // (the axios interceptor reads account from localStorage, but setting
+      // an explicit quick header here ensures immediate availability).
+      if (token) {
+        localStorage.setItem("account", JSON.stringify(res.data));
+      }
+
+      // store the state of login (this also persists account via the slice)
       dispatch(login(res.data));
-      navigate("/");
+
+      // Role-based navigation:
+      // - ADMIN -> (adjust as needed, example sends to home)
+      // - DEALER_STAFF -> go straight to Manage Car so content loads immediately
+      // - default -> home (/)
+      if (role === "ADMIN") {
+        // ADMIN users land on the Account Management area inside the dashboard
+        navigate("/dashboard/accounts");
+      } else if (role === "DEALER_STAFF") {
+        // Send user directly to /dashboard/car to mount the Manage Car page
+        // This ensures the page's useEffect runs and fetches data immediately.
+        navigate("/dashboard/car");
+      }
+      //  else if (role === "DEALER_MANAGER") {
+
+      // } else if (role === "EVM_STAFF") {
+
+      // }
+      else {
+        navigate("/");
+      }
     } catch (e) {
-      message.error("login failed, please try again" + e);
+      // Show a friendly toast on login failure. Keep the original error for
+      // debugging in the console.
+      console.error("Login error:", e);
+      toast.error("Invalid email or password");
     } finally {
       setIsLoading(false);
     }
@@ -171,7 +206,7 @@ function LoginPage() {
                         message: "Vui lòng nhập mật khẩu!",
                       },
                       {
-                        min: 6,
+                        min: 3,
                         message: "Mật khẩu phải có ít nhất 6 ký tự!",
                       },
                     ]}
