@@ -24,8 +24,8 @@ const { Title } = Typography;
 // NOTE: Endpoints are assumed as /accounts with
 // - GET    /accounts               -> list accounts (array)
 // - POST   /accounts               -> create account (body)
-// - PUT    /accounts/:userId       -> update account by userId
-// - DELETE /accounts/:userId       -> delete account by userId
+// - PUT    /accounts/:id           -> update account by id
+// - DELETE /accounts/:id           -> delete account by id
 // If your backend differs, adjust the paths/fields below.
 
 const AccountManagementPage = () => {
@@ -38,7 +38,7 @@ const AccountManagementPage = () => {
   const fetchAccounts = async () => {
     setLoading(true);
     try {
-      const res = await api.get("/accounts");
+      const res = await api.get("/users");
       const data = res?.data;
       if (!Array.isArray(data)) {
         message.error("Unexpected response from /accounts (expected an array)");
@@ -68,13 +68,18 @@ const AccountManagementPage = () => {
 
   const onEdit = (record) => {
     setEditing(record);
-    form.setFieldsValue(record);
+    // Only map editable fields; password isn't editable here
+    form.setFieldsValue({
+      email: record.email || "",
+      role: record.role,
+      dealerId: record.dealerId,
+    });
     setIsModalOpen(true);
   };
 
-  const onDelete = async (userId) => {
+  const onDelete = async (id) => {
     try {
-      await api.delete(`/accounts/${encodeURIComponent(userId)}`);
+      await api.delete(`/accounts/${encodeURIComponent(id)}`);
       message.success("Account deleted");
       fetchAccounts();
     } catch (err) {
@@ -86,15 +91,25 @@ const AccountManagementPage = () => {
   const onSubmit = async () => {
     try {
       const values = await form.validateFields();
-      // Expected fields: userId, name, email, phone, role
+      // Expected fields
+      // - Create: { email, password, role, dealerId }
+      // - Update: { email, role, dealerId }
       if (editing) {
-        await api.put(
-          `/accounts/${encodeURIComponent(editing.userId)}`,
-          values
-        );
+        const payload = {
+          email: values.email,
+          role: values.role,
+          dealerId: values.dealerId,
+        };
+        await api.put(`/accounts/${encodeURIComponent(editing.id)}`, payload);
         message.success("Account updated");
       } else {
-        await api.post("/accounts", values);
+        const payload = {
+          email: values.email,
+          password: values.password,
+          role: values.role,
+          dealerId: values.dealerId,
+        };
+        await api.post("/accounts", payload);
         message.success("Account created");
       }
       setIsModalOpen(false);
@@ -112,20 +127,26 @@ const AccountManagementPage = () => {
 
   const columns = [
     {
-      title: "User ID",
-      dataIndex: "userId",
-      key: "userId",
-      sorter: (a, b) => String(a.userId).localeCompare(String(b.userId)),
-    },
-    {
-      title: "Name",
-      dataIndex: "name",
-      key: "name",
-      sorter: (a, b) => String(a.name).localeCompare(String(b.name)),
+      title: "ID",
+      dataIndex: "id",
+      key: "id",
+      sorter: (a, b) => String(a.id).localeCompare(String(b.id)),
     },
     { title: "Email", dataIndex: "email", key: "email" },
-    { title: "Phone", dataIndex: "phone", key: "phone" },
-    { title: "Role", dataIndex: "role", key: "role" },
+    {
+      title: "Role",
+      key: "role",
+      render: (_, record) => record.role || "-",
+    },
+    { title: "Dealer ID", dataIndex: "dealerId", key: "dealerId" },
+    {
+      title: "Roles",
+      key: "roles",
+      render: (_, record) =>
+        Array.isArray(record.roles) && record.roles.length
+          ? record.roles.map((r) => r?.name || r?.id).join(", ")
+          : "-",
+    },
     {
       title: "Actions",
       key: "actions",
@@ -136,7 +157,7 @@ const AccountManagementPage = () => {
           </Button>
           <Popconfirm
             title="Delete this account?"
-            onConfirm={() => onDelete(record.userId)}
+            onConfirm={() => onDelete(record.id)}
           >
             <Button type="link" danger>
               Delete
@@ -170,7 +191,7 @@ const AccountManagementPage = () => {
       </div>
 
       <Table
-        rowKey="userId"
+        rowKey="id"
         loading={loading}
         dataSource={accounts}
         columns={columns}
@@ -187,41 +208,30 @@ const AccountManagementPage = () => {
         okText="Save"
       >
         <Form form={form} layout="vertical">
-          {/* userId is editable when creating; disabled in edit mode to avoid ID changes. */}
-          <Form.Item
-            name="userId"
-            label="User ID"
-            rules={[{ required: true, message: "Please enter the user ID" }]}
-          >
-            <Input disabled={!!editing} />
-          </Form.Item>
-          <Form.Item
-            name="name"
-            label="Name"
-            rules={[{ required: true, message: "Please enter the name" }]}
-          >
-            <Input />
-          </Form.Item>
           <Form.Item
             name="email"
             label="Email"
             rules={[
-              {
-                required: true,
-                type: "email",
-                message: "Please enter a valid email",
-              },
+              { required: true, message: "Please enter the email" },
+              { type: "email", message: "Please enter a valid email" },
             ]}
           >
             <Input />
           </Form.Item>
-          <Form.Item
-            name="phone"
-            label="Phone"
-            rules={[{ required: true, message: "Please enter the phone" }]}
-          >
-            <Input />
-          </Form.Item>
+
+          {!editing && (
+            <Form.Item
+              name="password"
+              label="Password"
+              rules={[
+                { required: true, message: "Please enter the password" },
+                { min: 6, message: "Password must be at least 6 characters" },
+              ]}
+            >
+              <Input.Password />
+            </Form.Item>
+          )}
+
           <Form.Item
             name="role"
             label="Role"
@@ -230,13 +240,20 @@ const AccountManagementPage = () => {
             <Select
               placeholder="Select role"
               options={[
-                { value: "ADMIN", label: "ADMIN" },
-                { value: "DEALER_STAFF", label: "DEALER_STAFF" },
-                { value: "EVM_STAFF", label: "EVM_STAFF" },
+                { value: "DEALER_MANAGER", label: "Dealer Manager" },
+                { value: "DEALER_STAFF", label: "Dealer Staff" },
+                { value: "EVM_STAFF", label: "EVM Staff" },
               ]}
             />
           </Form.Item>
-          {/* If your backend requires password on create, add it here (and hide on edit). */}
+
+          <Form.Item
+            name="dealerId"
+            label="Dealer ID"
+            rules={[{ required: true, message: "Please enter the Dealer ID" }]}
+          >
+            <Input />
+          </Form.Item>
         </Form>
       </Modal>
     </Layout>
