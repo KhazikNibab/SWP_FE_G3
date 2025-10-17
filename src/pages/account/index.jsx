@@ -41,11 +41,12 @@ const AccountManagementPage = () => {
       const res = await api.get("/users");
       const data = res?.data;
       if (!Array.isArray(data)) {
-        message.error("Unexpected response from /accounts (expected an array)");
+        message.error("Unexpected response from /users (expected an array)");
         setAccounts([]);
         return;
       }
       setAccounts(data);
+      console.log(res.data)
     } catch (err) {
       console.error("Failed to fetch accounts", err);
       message.error("Failed to load accounts");
@@ -57,6 +58,15 @@ const AccountManagementPage = () => {
   useEffect(() => {
     fetchAccounts();
   }, []);
+
+  // Log the data used by the table whenever it changes
+  useEffect(() => {
+    if (Array.isArray(accounts)) {
+      console.log("Accounts table data:", accounts);
+    } else {
+      console.log("Accounts loaded (non-array):", accounts);
+    }
+  }, [accounts]);
 
   // You can derive role options here if you add role-based filters in the future.
 
@@ -79,7 +89,7 @@ const AccountManagementPage = () => {
 
   const onDelete = async (id) => {
     try {
-      await api.delete(`/accounts/${encodeURIComponent(id)}`);
+      await api.delete(`/users/${encodeURIComponent(id)}`);
       message.success("Account deleted");
       fetchAccounts();
     } catch (err) {
@@ -100,7 +110,8 @@ const AccountManagementPage = () => {
           role: values.role,
           dealerId: values.dealerId,
         };
-        await api.put(`/accounts/${encodeURIComponent(editing.id)}`, payload);
+        // Update account by id
+        await api.put(`/users/${encodeURIComponent(editing.id)}`, payload);
         message.success("Account updated");
       } else {
         const payload = {
@@ -109,7 +120,8 @@ const AccountManagementPage = () => {
           role: values.role,
           dealerId: values.dealerId,
         };
-        await api.post("/accounts", payload);
+        // Create new account via admin endpoint
+        await api.post("/users/admin/users", payload);
         message.success("Account created");
       }
       setIsModalOpen(false);
@@ -130,7 +142,12 @@ const AccountManagementPage = () => {
       title: "ID",
       dataIndex: "id",
       key: "id",
-      sorter: (a, b) => String(a.id).localeCompare(String(b.id)),
+      sorter: (a, b) =>
+        String(a.id).localeCompare(String(b.id), undefined, {
+          numeric: true,
+          sensitivity: "base",
+        }),
+      sortDirections: ["ascend", "descend"],
     },
     { title: "Email", dataIndex: "email", key: "email" },
     {
@@ -139,14 +156,14 @@ const AccountManagementPage = () => {
       render: (_, record) => record.role || "-",
     },
     { title: "Dealer ID", dataIndex: "dealerId", key: "dealerId" },
-    {
-      title: "Roles",
-      key: "roles",
-      render: (_, record) =>
-        Array.isArray(record.roles) && record.roles.length
-          ? record.roles.map((r) => r?.name || r?.id).join(", ")
-          : "-",
-    },
+    // {
+    //   title: "Roles",
+    //   key: "roles",
+    //   render: (_, record) =>
+    //     Array.isArray(record.roles) && record.roles.length
+    //       ? record.roles.map((r) => r?.name || r?.id).join(", ")
+    //       : "-",
+    // },
     {
       title: "Actions",
       key: "actions",

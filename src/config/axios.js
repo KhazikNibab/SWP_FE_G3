@@ -2,7 +2,7 @@ import axios from "axios";
 
 // Create a preconfigured axios instance for your API
 const api = axios.create({
-  baseURL: 'https://b984ff2ec4f7.ngrok-free.app/api',
+  baseURL: 'https://92167f515c68.ngrok-free.app/api',
   headers: {
     // ngrok free sometimes serves a browser interstitial page unless this
     // header is present. Setting this header tells ngrok to skip the warning
