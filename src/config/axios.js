@@ -20,7 +20,10 @@ const api = axios.create({
 // request so updates to the saved token are picked up without a page reload.
 api.interceptors.request.use((config) => {
   try {
-    const raw = localStorage.getItem('account')
+    const get = (storage) => {
+      try { return storage.getItem('account') } catch { return null }
+    }
+    const raw = get(sessionStorage) || get(localStorage)
     if (raw) {
       const account = JSON.parse(raw)
       if (account && account.token) {

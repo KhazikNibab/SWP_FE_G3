@@ -11,6 +11,7 @@ import {
   message,
   ConfigProvider,
   theme,
+  Checkbox,
 } from "antd";
 import {
   ThunderboltOutlined,
@@ -44,23 +45,20 @@ function LoginPage() {
       const res = await api.post("/auth/login", values);
       toast.success("Successfully log in");
       console.log(res.data);
-      const { role, token } = res.data;
+      const { role } = res.data;
 
-      // Persist full account (slice will also persist) so other pages can
-      // read role/token as needed. We already dispatch login which saves
-      // the account in the slice/localStorage; keep a separate 'role' key
-      // if other non-Redux code reads it.
-      localStorage.setItem("role", role);
-
-      // If token provided, ensure axios will send it on subsequent requests
-      // (the axios interceptor reads account from localStorage, but setting
-      // an explicit quick header here ensures immediate availability).
-      if (token) {
-        localStorage.setItem("account", JSON.stringify(res.data));
+      // Persist role alongside account for any non-Redux consumers; prefer session.
+      try {
+        sessionStorage.setItem("role", role);
+      } catch {
+        /* ignore */
       }
 
-      // store the state of login (this also persists account via the slice)
-      dispatch(login(res.data));
+      // No direct account write here; the slice handles persistence (session or remember).
+
+      // store the state of login (slice persists to sessionStorage by default,
+      // and to localStorage only if remember is true)
+      dispatch(login({ ...res.data, remember: !!values.remember }));
 
       // Role-based navigation:
       // - ADMIN -> (adjust as needed, example sends to home)
@@ -216,6 +214,11 @@ function LoginPage() {
                       placeholder="••••••••"
                       size="large"
                     />
+                  </Form.Item>
+
+                  {/* Remember me */}
+                  <Form.Item name="remember" valuePropName="checked">
+                    <Checkbox>Remember me</Checkbox>
                   </Form.Item>
 
                   {/* Nút Submit */}

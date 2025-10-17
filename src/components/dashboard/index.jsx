@@ -1,6 +1,10 @@
 import React, { useMemo, useState } from "react";
-import { PieChartOutlined, TeamOutlined } from "@ant-design/icons";
-import { Breadcrumb, Layout, Menu, theme, Button } from "antd";
+import {
+  PieChartOutlined,
+  TeamOutlined,
+  HomeOutlined,
+} from "@ant-design/icons";
+import { Breadcrumb, Layout, Menu, theme, Button, Tooltip } from "antd";
 import { Link, Outlet, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { logout } from "../../redux/accountSlice";
@@ -70,10 +74,21 @@ const Dashboard = () => {
         style={{ padding: 0 }}
       >
         <div className="px-6 h-16 flex items-center justify-between text-white">
-          <div className="text-2xl font-bold text-sky-400">
-            <span className="font-light">EV</span>Motion
+          <div className="text-2xl font-bold">
+            <Link to="/" className="text-sky-400 hover:text-sky-300">
+              <span className="font-light">EV</span>Motion
+            </Link>
           </div>
           <div className="flex items-center gap-4">
+            <Tooltip title="Go to Home">
+              <Button
+                size="small"
+                icon={<HomeOutlined />}
+                onClick={() => navigate("/")}
+                ghost
+                aria-label="Go to Home"
+              />
+            </Tooltip>
             {account ? (
               <>
                 <span className="hidden sm:inline text-slate-300">
