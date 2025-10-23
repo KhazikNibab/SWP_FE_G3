@@ -19,6 +19,7 @@ import HomePage from "./pages/home";
 import AccountManagementPage from "./pages/account";
 import ManageCar from "./pages/car";
 import Contract from "./pages/contract";
+import Customer from "./pages/customer";
 
 function App() {
   const router = createBrowserRouter([
@@ -45,6 +46,10 @@ function App() {
         {
           path: "accounts",
           element: <AccountManagementPage />, // Admin account management
+        },
+        {
+          path: "customer",
+          element: <Customer />, //for dealer staff
         },
       ],
     },

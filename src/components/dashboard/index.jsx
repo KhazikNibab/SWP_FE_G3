@@ -39,6 +39,7 @@ function useMenuItems(role) {
       getItem("Manage Car", "car", <PieChartOutlined />),
       getItem("Manage Category", "category", <PieChartOutlined />),
       getItem("Manage Contract", "contract", <FileTextOutlined />),
+      getItem("Manage Customers", "customer", <FileTextOutlined />),
     ];
     if (role === "ADMIN") {
       base.push(getItem("Manage Accounts", "accounts", <TeamOutlined />));
