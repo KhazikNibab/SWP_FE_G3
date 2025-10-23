@@ -1,5 +1,16 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Table, Input, message, Space, Button } from "antd";
+import {
+  Table,
+  Input,
+  message,
+  Space,
+  Button,
+  InputNumber,
+  Modal,
+  Descriptions,
+  Typography,
+  Divider,
+} from "antd";
 import api from "../../config/axios";
 // Note: The axios instance sets 'ngrok-skip-browser-warning' and 'Accept: application/json'
 // headers to bypass ngrok's interstitial HTML page and request JSON directly.
@@ -8,6 +19,9 @@ const ManageCar = () => {
   // Base data state (original cars from API)
   const [cars, setCars] = useState([]);
   const [loading, setLoading] = useState(false);
+  // Per-row quantity state and requesting state
+  const [orderQtyMap, setOrderQtyMap] = useState({});
+  const [orderingId, setOrderingId] = useState(null);
 
   // UI state for search and filter
   const [searchText, setSearchText] = useState("");
@@ -94,7 +108,118 @@ const ManageCar = () => {
       // Render price with a dollar sign and formatting
       render: (price) => `$${Number(price).toLocaleString()}`,
     },
+    //order car from EVM staff
+    {
+      title: "Make Order",
+      key: "make-order",
+      render: (_, car) => {
+        const qty = orderQtyMap[car.id] ?? 1;
+        return (
+          <Space>
+            <InputNumber
+              min={1}
+              max={10}
+              value={qty}
+              onChange={(val) => handleQtyChange(car.id, val)}
+              style={{ width: 90 }}
+            />
+            <Button
+              type="primary"
+              onClick={() => handleMakeOrder(car)}
+              loading={orderingId === car.id}
+            >
+              Request
+            </Button>
+          </Space>
+        );
+      },
+    },
   ];
+
+  // Update per-row quantity
+  const handleQtyChange = (carId, val) => {
+    const next = Number(val) || 1;
+    const clamped = Math.max(1, Math.min(10, next));
+    setOrderQtyMap((prev) => ({ ...prev, [carId]: clamped }));
+  };
+
+  // Make order handler with placeholder EVM Staff request
+  const handleMakeOrder = (car) => {
+    const qty = orderQtyMap[car.id] ?? 1;
+    if (qty < 1 || qty > 10) {
+      message.error("Quantity must be between 1 and 10.");
+      return;
+    }
+
+    const unitPrice = Number(car.price) || 0;
+    const total = unitPrice * qty;
+    const now = new Date();
+
+    Modal.confirm({
+      title: "Confirm order request",
+      content: (
+        <div>
+          <Typography.Paragraph type="secondary" style={{ marginBottom: 12 }}>
+            Please review your order details before confirming.
+          </Typography.Paragraph>
+          <Descriptions
+            bordered
+            size="small"
+            column={1}
+            labelStyle={{ width: 160 }}
+          >
+            <Descriptions.Item label="Car ID">{car.id}</Descriptions.Item>
+            <Descriptions.Item label="Manufacturer">
+              {car.manufacturer}
+            </Descriptions.Item>
+            <Descriptions.Item label="Model">{car.model}</Descriptions.Item>
+            <Descriptions.Item label="Unit Price">
+              ${unitPrice.toLocaleString()}
+            </Descriptions.Item>
+            <Descriptions.Item label="Quantity">{qty}</Descriptions.Item>
+            <Descriptions.Item label="Total">
+              <strong>${total.toLocaleString()}</strong>
+            </Descriptions.Item>
+            <Descriptions.Item label="Recipient">
+              EVM Staff (placeholder)
+            </Descriptions.Item>
+            <Descriptions.Item label="Requested At">
+              {now.toLocaleString()}
+            </Descriptions.Item>
+          </Descriptions>
+          <Divider style={{ margin: "12px 0" }} />
+          <Typography.Text>
+            This will create a request to <strong>EVM Staff</strong>. Since that
+            role isn't set up yet, we'll record it with a placeholder.
+          </Typography.Text>
+        </div>
+      ),
+      okText: "Send Request",
+      cancelText: "Cancel",
+      onOk: async () => {
+        setOrderingId(car.id);
+        const payload = {
+          carId: car.id,
+          quantity: qty,
+          assignedTo: "EVM Staff (TBD)",
+          unitPrice,
+          total,
+          requestedAt: now.toISOString(),
+        };
+
+        try {
+          // Placeholder endpoint; replace when backend is ready
+          await api.post("/evm-requests", payload);
+          message.success("Order request sent to EVM Staff.");
+        } catch (err) {
+          console.warn("/evm-requests not available, simulating success", err);
+          message.success("Order request simulated (EVM Staff placeholder).");
+        } finally {
+          setOrderingId(null);
+        }
+      },
+    });
+  };
 
   return (
     <>

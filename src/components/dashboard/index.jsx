@@ -3,6 +3,7 @@ import {
   PieChartOutlined,
   TeamOutlined,
   HomeOutlined,
+  FileTextOutlined,
 } from "@ant-design/icons";
 import { Breadcrumb, Layout, Menu, theme, Button, Tooltip } from "antd";
 import { Link, Outlet, useNavigate } from "react-router-dom";
@@ -37,6 +38,7 @@ function useMenuItems(role) {
     const base = [
       getItem("Manage Car", "car", <PieChartOutlined />),
       getItem("Manage Category", "category", <PieChartOutlined />),
+      getItem("Manage Contract", "contract", <FileTextOutlined />),
     ];
     if (role === "ADMIN") {
       base.push(getItem("Manage Accounts", "accounts", <TeamOutlined />));

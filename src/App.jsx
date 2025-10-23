@@ -18,6 +18,7 @@ import LoginPage from "./pages/login";
 import HomePage from "./pages/home";
 import AccountManagementPage from "./pages/account";
 import ManageCar from "./pages/car";
+import Contract from "./pages/contract";
 
 function App() {
   const router = createBrowserRouter([
@@ -36,6 +37,10 @@ function App() {
         {
           path: "category",
           element: <ManageCategory />, //outlet
+        },
+        {
+          path: "contract",
+          element: <Contract />, // Contract management
         },
         {
           path: "accounts",
