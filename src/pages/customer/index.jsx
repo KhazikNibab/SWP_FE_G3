@@ -11,6 +11,18 @@ const Customer = () => {
   const [editSubmitting, setEditSubmitting] = useState(false);
   const [editOriginalPhone, setEditOriginalPhone] = useState("");
   const [form] = Form.useForm();
+  // Add modal state for Customer
+  const [addOpen, setAddOpen] = useState(false);
+  const [addSubmitting, setAddSubmitting] = useState(false);
+  const [addForm] = Form.useForm();
+
+  // Helper to sanitize phone input to digits-only and cap at 10
+  const handlePhoneChange = (formInstance) => (e) => {
+    const digits = String(e?.target?.value ?? "")
+      .replace(/\D/g, "")
+      .slice(0, 10);
+    formInstance.setFieldsValue({ phone: digits });
+  };
 
   const fetchCustomers = async () => {
     setLoading(true);
@@ -143,6 +155,55 @@ const Customer = () => {
     }
   };
 
+  // Add customer handlers
+  const handleOpenAdd = () => {
+    setAddOpen(true);
+    addForm.resetFields();
+  };
+
+  const handleSubmitAdd = async () => {
+    try {
+      setAddSubmitting(true);
+      const values = await addForm.validateFields();
+      const payload = {
+        phone: values.phone ?? "",
+        name: values.name ?? "",
+        email: values.email ?? "",
+        address: values.address ?? "",
+        note: values.note ?? "",
+      };
+      const res = await api.post(`/customers`, payload);
+      const created = res?.data;
+      message.success("Customer created");
+      if (created && typeof created === "object") {
+        setCustomers((prev) => {
+          // avoid duplicate by phone if exists
+          const existsIdx = prev.findIndex((c) => c.phone === created.phone);
+          if (existsIdx !== -1) {
+            const next = [...prev];
+            next[existsIdx] = { ...next[existsIdx], ...created };
+            return next;
+          }
+          return [created, ...prev];
+        });
+      } else {
+        // Fallback: refetch list if API does not return created entity
+        fetchCustomers();
+      }
+      setAddOpen(false);
+    } catch (err) {
+      if (err && err.errorFields) {
+        // validation error from form; keep modal open
+      } else {
+        const msg =
+          err?.response?.data?.message || err?.message || "Create failed";
+        message.error(msg);
+      }
+    } finally {
+      setAddSubmitting(false);
+    }
+  };
+
   return (
     <>
       <Space style={{ marginBottom: 16 }} wrap>
@@ -155,6 +216,9 @@ const Customer = () => {
           style={{ width: 360 }}
         />
         <Button onClick={() => setSearchText("")}>Reset</Button>
+        <Button type="primary" onClick={handleOpenAdd}>
+          Add Customer
+        </Button>
       </Space>
 
       <Table
@@ -188,9 +252,84 @@ const Customer = () => {
           <Form.Item
             label="Phone"
             name="phone"
-            rules={[{ required: true, message: "Phone is required" }]}
+            rules={[
+              { required: true, message: "Phone is required" },
+              {
+                pattern: /^\d{1,10}$/,
+                message: "Phone must be numbers only, max 10 digits",
+              },
+            ]}
           >
-            <Input placeholder="Enter phone" />
+            <Input
+              placeholder="Enter phone"
+              inputMode="numeric"
+              maxLength={10}
+              onChange={handlePhoneChange(form)}
+            />
+          </Form.Item>
+          <Form.Item
+            label="Name"
+            name="name"
+            rules={[{ required: true, message: "Name is required" }]}
+          >
+            <Input placeholder="Enter name" />
+          </Form.Item>
+          <Form.Item
+            label="Email"
+            name="email"
+            rules={[{ type: "email", message: "Invalid email" }]}
+          >
+            <Input placeholder="Enter email" />
+          </Form.Item>
+          <Form.Item label="Address" name="address">
+            <Input placeholder="Enter address" />
+          </Form.Item>
+          <Form.Item label="Note" name="note">
+            <Input.TextArea
+              placeholder="Enter note"
+              autoSize={{ minRows: 2 }}
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* CUSTOMER ADD MODAL */}
+      <Modal
+        title="Add Customer"
+        open={addOpen}
+        onOk={handleSubmitAdd}
+        onCancel={() => setAddOpen(false)}
+        confirmLoading={addSubmitting}
+        okText="Create"
+      >
+        <Form
+          form={addForm}
+          layout="vertical"
+          initialValues={{
+            phone: "",
+            name: "",
+            email: "",
+            address: "",
+            note: "",
+          }}
+        >
+          <Form.Item
+            label="Phone"
+            name="phone"
+            rules={[
+              { required: true, message: "Phone is required" },
+              {
+                pattern: /^\d{1,10}$/,
+                message: "Phone must be numbers only, max 10 digits",
+              },
+            ]}
+          >
+            <Input
+              placeholder="Enter phone"
+              inputMode="numeric"
+              maxLength={10}
+              onChange={handlePhoneChange(addForm)}
+            />
           </Form.Item>
           <Form.Item
             label="Name"
