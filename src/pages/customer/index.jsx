@@ -1,5 +1,19 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Table, Input, message, Space, Button, Modal, Form } from "antd";
+import {
+  Table,
+  Input,
+  message,
+  Space,
+  Button,
+  Modal,
+  Form,
+  // DatePicker to pick contractDate; returns a Dayjs-like object in AntD v5
+  DatePicker,
+  // Numeric inputs for money-ish fields
+  InputNumber,
+  // Select for enumerated payment statuses
+  Select,
+} from "antd";
 import api from "../../config/axios";
 
 const Customer = () => {
@@ -15,6 +29,12 @@ const Customer = () => {
   const [addOpen, setAddOpen] = useState(false);
   const [addSubmitting, setAddSubmitting] = useState(false);
   const [addForm] = Form.useForm();
+
+  // Create Contract modal state
+  const [contractOpen, setContractOpen] = useState(false); // controls modal visibility
+  const [contractSubmitting, setContractSubmitting] = useState(false); // shows loading on OK
+  const [contractForm] = Form.useForm(); // isolated Form instance for the contract modal
+  const [selectedCustomer, setSelectedCustomer] = useState(null); // the customer row we are creating a contract for
 
   // Helper to sanitize phone input to digits-only and cap at 10
   const handlePhoneChange = (formInstance) => (e) => {
@@ -105,6 +125,9 @@ const Customer = () => {
           <Button type="link" onClick={() => handleOpenEdit(record)}>
             Edit
           </Button>
+          <Button type="primary" onClick={() => handleOpenCreateContract(record)}>
+            Create Contract
+          </Button>
         </Space>
       ),
     },
@@ -120,6 +143,79 @@ const Customer = () => {
       note: record?.note || "",
     });
     setEditOpen(true);
+  };
+
+  // Create Contract handlers
+  const handleOpenCreateContract = (record) => {
+    setSelectedCustomer(record);
+    // Seed the contract form with customer info (read-only fields) and sensible defaults
+    contractForm.setFieldsValue({
+      customerName: record?.name || "",
+      customerPhone: record?.phone || "",
+      customerEmail: record?.email || "",
+      vehicleId: "",
+      // Ask user to pick a date; we convert it to ISO string on submit
+      contractDate: undefined,
+      promotionAmount: 0,
+      totalAmount: 0,
+      dealerId: "",
+      paymentMethodId: undefined,
+      paymentStatus: "Pending",
+    });
+    setContractOpen(true);
+  };
+
+  const submitCreateContract = async () => {
+    try {
+      setContractSubmitting(true);
+      // Validate required inputs in the modal form
+      const values = await contractForm.validateFields();
+      // Build payload expected by backend from form values (and selected customer as fallback)
+      const payload = {
+        customerName: values.customerName || selectedCustomer?.name || "",
+        customerPhone: values.customerPhone || selectedCustomer?.phone || "",
+        customerEmail: values.customerEmail || selectedCustomer?.email || "",
+        vehicleId: values.vehicleId || "",
+        // AntD DatePicker provides a Dayjs-like object; convert to ISO string. If missing, default to now.
+        contractDate: values.contractDate
+          ? (values.contractDate?.toDate
+            ? values.contractDate.toDate().toISOString()
+            : new Date(values.contractDate).toISOString())
+          : new Date().toISOString(),
+        promotionAmount: Number(values.promotionAmount || 0),
+        totalAmount: Number(values.totalAmount || 0),
+        dealerId: values.dealerId || "",
+        paymentMethodId: Number(values.paymentMethodId || 0),
+        paymentStatus: values.paymentStatus || "Pending",
+      };
+
+      // Try primary endpoint (/sale-contracts), then fallback to /contracts to match list page behavior
+      let res;
+      try {
+        res = await api.post("/sale-contracts", payload);
+      } catch (e1) {
+        res = await api.post("/contracts", payload);
+      }
+
+      // Notify outcome and close modal; caller can refresh list elsewhere if needed
+      if (res?.data) {
+        message.success("Contract created");
+      } else {
+        message.success("Contract submitted");
+      }
+      setContractOpen(false);
+      setSelectedCustomer(null);
+      contractForm.resetFields();
+    } catch (err) {
+      if (err && err.errorFields) {
+        // Form validation error: keep modal open so user can fix inputs
+      } else {
+        const msg = err?.response?.data?.message || err?.message || "Create contract failed";
+        message.error(msg);
+      }
+    } finally {
+      setContractSubmitting(false);
+    }
   };
 
   const handleSubmitEdit = async () => {
@@ -229,6 +325,97 @@ const Customer = () => {
         }
         loading={loading}
       />
+
+      {/* CREATE CONTRACT MODAL */}
+      <Modal
+        title="Create Contract"
+        open={contractOpen}
+        onOk={submitCreateContract}
+        onCancel={() => setContractOpen(false)}
+        confirmLoading={contractSubmitting}
+        okText="Create"
+        destroyOnClose
+      >
+        <Form
+          form={contractForm}
+          layout="vertical"
+          initialValues={{
+            customerName: selectedCustomer?.name || "",
+            customerPhone: selectedCustomer?.phone || "",
+            customerEmail: selectedCustomer?.email || "",
+            vehicleId: "",
+            // Start empty; user picks a date in UI
+            contractDate: undefined,
+            promotionAmount: 0,
+            totalAmount: 0,
+            dealerId: "",
+            paymentMethodId: undefined,
+            paymentStatus: "Pending",
+          }}
+        >
+          {/* Customer info (read-only). These are shown for context and included in the payload. */}
+          <Form.Item label="Customer Name" name="customerName">
+            <Input disabled />
+          </Form.Item>
+          <Form.Item label="Customer Phone" name="customerPhone">
+            <Input disabled />
+          </Form.Item>
+          <Form.Item label="Customer Email" name="customerEmail">
+            <Input disabled />
+          </Form.Item>
+
+          {/* Contract fields the user must fill in */}
+          <Form.Item
+            label="Vehicle ID"
+            name="vehicleId"
+            rules={[{ required: true, message: "Vehicle ID is required" }]}
+          >
+            <Input placeholder="Enter vehicle ID" />
+          </Form.Item>
+
+          <Form.Item
+            label="Contract Date"
+            name="contractDate"
+            rules={[{ required: true, message: "Contract date is required" }]}
+          >
+            {/* AntD DatePicker returns a Dayjs-like object. We convert to ISO on submit. */}
+            <DatePicker style={{ width: "100%" }} />
+          </Form.Item>
+
+          <Form.Item label="Promotion Amount" name="promotionAmount">
+            {/* Money input; coerced to Number before sending */}
+            <InputNumber style={{ width: "100%" }} min={0} step={100} />
+          </Form.Item>
+
+          <Form.Item
+            label="Total Amount"
+            name="totalAmount"
+            rules={[{ required: true, message: "Total amount is required" }]}
+          >
+            <InputNumber style={{ width: "100%" }} min={0} step={100} />
+          </Form.Item>
+
+          <Form.Item label="Dealer ID" name="dealerId">
+            <Input placeholder="Enter dealer ID" />
+          </Form.Item>
+
+          <Form.Item label="Payment Method ID" name="paymentMethodId">
+            {/* Numeric identifier for payment method, if required by backend */}
+            <InputNumber style={{ width: "100%" }} min={0} />
+          </Form.Item>
+
+          <Form.Item label="Payment Status" name="paymentStatus">
+            {/* Enum-like select; matches what the contracts list filters on */}
+            <Select
+              options={[
+                { value: "Pending", label: "Pending" },
+                { value: "Paid", label: "Paid" },
+                { value: "Failed", label: "Failed" },
+              ]}
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
       {/* CUSTOMER EDIT MODAL */}
       <Modal
         title="Edit Customer"

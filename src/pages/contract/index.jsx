@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Table, Input, Space, Button, message } from "antd";
+import { Table, Input, Space, Button, message, Modal, Form, Select, DatePicker, InputNumber } from "antd";
 import api from "../../config/axios";
 
 // Contract management table — mirrors the Car table behavior but for contracts
@@ -7,6 +7,12 @@ const Contract = () => {
   // Data state
   const [contracts, setContracts] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  // Modal / create-contract state
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [customers, setCustomers] = useState([]);
+  const [creating, setCreating] = useState(false);
+  const [form] = Form.useForm();
 
   // UI state
   const [searchText, setSearchText] = useState("");
@@ -42,7 +48,26 @@ const Contract = () => {
 
   useEffect(() => {
     fetchContracts();
+    // prefetch customers for the create modal (best-effort)
+    fetchCustomers();
   }, []);
+
+  // Fetch list of customers for the create-contract modal (best-effort)
+  const fetchCustomers = async () => {
+    try {
+      let res;
+      try {
+        res = await api.get("/customers");
+      } catch (e) {
+        res = await api.get("/users");
+      }
+      const data = res?.data;
+      if (Array.isArray(data)) setCustomers(data);
+    } catch (err) {
+      // non-fatal
+      console.warn("Failed to fetch customers for contract creation", err);
+    }
+  };
 
   // Unique status options for filter
   const statusOptions = useMemo(() => {
@@ -57,16 +82,12 @@ const Contract = () => {
     return (contracts || []).filter((c) => {
       const matchSearch = q
         ? [
-            c.id,
-            c.customerName,
-            c.customerEmail,
-            c.customerPhone,
-            c.vehicleId,
-            c.vehicleModel,
-            c.vehicleManufacturer,
-          ]
-            .map((v) => String(v || "").toLowerCase())
-            .some((v) => v.includes(q))
+          c.id,
+          c.customerName,
+          c.vehicleModel,
+        ]
+          .map((v) => String(v || "").toLowerCase())
+          .some((v) => v.includes(q))
         : true;
       const matchStatus = paymentStatus
         ? c.paymentStatus === paymentStatus
@@ -78,9 +99,20 @@ const Contract = () => {
   const currency = (n) =>
     typeof n === "number" ? `$${Number(n).toLocaleString()}` : n ?? "";
 
+  // Format to dd/MM/yyyy
+  const formatDate = (d) => {
+    if (!d) return "";
+    const dt = new Date(d);
+    if (isNaN(dt)) return "";
+    const dd = String(dt.getDate()).padStart(2, "0");
+    const mm = String(dt.getMonth() + 1).padStart(2, "0");
+    const yyyy = dt.getFullYear();
+    return `${dd}/${mm}/${yyyy}`;
+  };
+
   const columns = [
     {
-      title: "ID",
+      title: "Contract ID",
       dataIndex: "id",
       key: "id",
       sorter: (a, b) => String(a.id).localeCompare(String(b.id)),
@@ -92,63 +124,34 @@ const Contract = () => {
       sorter: (a, b) =>
         (a.customerName || "").localeCompare(b.customerName || ""),
     },
-    { title: "Phone", dataIndex: "customerPhone", key: "customerPhone" },
-    { title: "Email", dataIndex: "customerEmail", key: "customerEmail" },
-    { title: "Model", dataIndex: "vehicleModel", key: "vehicleModel" },
-    {
-      title: "Manufacturer",
-      dataIndex: "vehicleManufacturer",
-      key: "vehicleManufacturer",
-    },
-    {
-      title: "Price",
-      dataIndex: "vehiclePrice",
-      key: "vehiclePrice",
-      sorter: (a, b) => (a.vehiclePrice || 0) - (b.vehiclePrice || 0),
-      render: (v) => currency(v),
-    },
+    { title: "Vehicle Model", dataIndex: "vehicleModel", key: "vehicleModel" },
     {
       title: "Contract Date",
       dataIndex: "contractDate",
       key: "contractDate",
       sorter: (a, b) =>
         new Date(a.contractDate || 0) - new Date(b.contractDate || 0),
-      render: (d) => (d ? new Date(d).toLocaleString() : ""),
+      render: (d) => formatDate(d),
     },
     {
-      title: "Promotion",
-      dataIndex: "promotionAmount",
-      key: "promotionAmount",
-      sorter: (a, b) => (a.promotionAmount || 0) - (b.promotionAmount || 0),
-      render: (v) => currency(v),
-    },
-    {
-      title: "Total",
+      title: "Total Amount",
       dataIndex: "totalAmount",
       key: "totalAmount",
       sorter: (a, b) => (a.totalAmount || 0) - (b.totalAmount || 0),
       render: (v) => currency(v),
     },
-    {
-      title: "Payment Method ID",
-      dataIndex: "paymentMethodId",
-      key: "paymentMethodId",
-      sorter: (a, b) => (a.paymentMethodId || 0) - (b.paymentMethodId || 0),
-    },
-    {
-      title: "Payment Method",
-      dataIndex: "paymentMethodDisplayName",
-      key: "paymentMethodDisplayName",
-    },
-    { title: "Status", dataIndex: "paymentStatus", key: "paymentStatus" },
+    { title: "Payment Status", dataIndex: "paymentStatus", key: "paymentStatus" },
   ];
 
   return (
     <>
       <Space style={{ marginBottom: 16 }} wrap>
+        <Button type="primary" onClick={() => setIsModalVisible(true)}>
+          Create Contract
+        </Button>
         <Input.Search
           allowClear
-          placeholder="Search by ID, customer, email, or vehicle"
+          placeholder="Search by ID, customer, or vehicle"
           value={searchText}
           onSearch={(val) => setSearchText(val)}
           onChange={(e) => setSearchText(e.target.value)}
@@ -184,6 +187,119 @@ const Contract = () => {
         rowKey="id"
         loading={loading}
       />
+
+      <Modal
+        title="Create Contract"
+        visible={isModalVisible}
+        onCancel={() => {
+          setIsModalVisible(false);
+          form.resetFields();
+        }}
+        footer={null}
+      >
+        <Form form={form} layout="vertical" onFinish={async (values) => {
+          setCreating(true);
+          try {
+            // normalize date
+            let contractDate = values.contractDate;
+            if (contractDate) {
+              // moment or Date
+              contractDate = contractDate.toISOString ? contractDate.toISOString() : new Date(contractDate).toISOString();
+            }
+
+            const payload = {
+              customerName: values.customerName,
+              customerPhone: values.customerPhone,
+              customerEmail: values.customerEmail,
+              vehicleId: values.vehicleId,
+              contractDate: contractDate,
+              promotionAmount: Number(values.promotionAmount) || 0,
+              totalAmount: Number(values.totalAmount) || 0,
+              dealerId: values.dealerId,
+              paymentMethodId: Number(values.paymentMethodId) || 0,
+              paymentStatus: values.paymentStatus,
+            };
+
+            try {
+              await api.post('/sale-contracts', payload);
+            } catch (e) {
+              await api.post('/contracts', payload);
+            }
+
+            message.success('Contract created');
+            setIsModalVisible(false);
+            form.resetFields();
+            fetchContracts();
+          } catch (err) {
+            console.error(err);
+            message.error('Failed to create contract');
+          } finally {
+            setCreating(false);
+          }
+        }}>
+          <Form.Item name="customerId" label="Select Customer">
+            <Select
+              placeholder="Choose a customer"
+              options={(customers || []).map(c => ({ value: c.id, label: c.customerName || c.name || c.email }))}
+              onChange={(val) => {
+                const c = (customers || []).find(x => String(x.id) === String(val));
+                if (c) {
+                  form.setFieldsValue({
+                    customerName: c.customerName || c.name || "",
+                    customerPhone: c.customerPhone || c.phone || "",
+                    customerEmail: c.customerEmail || c.email || "",
+                  });
+                }
+              }}
+            />
+          </Form.Item>
+
+          <Form.Item name="customerName" label="Customer Name">
+            <Input disabled />
+          </Form.Item>
+          <Form.Item name="customerPhone" label="Customer Phone">
+            <Input disabled />
+          </Form.Item>
+          <Form.Item name="customerEmail" label="Customer Email">
+            <Input disabled />
+          </Form.Item>
+
+          <Form.Item name="vehicleId" label="Vehicle ID" rules={[{ required: true, message: 'Please enter vehicle id' }]}>
+            <Input />
+          </Form.Item>
+
+          <Form.Item name="contractDate" label="Contract Date" rules={[{ required: true, message: 'Please select a date' }]}>
+            <DatePicker style={{ width: '100%' }} />
+          </Form.Item>
+
+          <Form.Item name="promotionAmount" label="Promotion Amount">
+            <InputNumber style={{ width: '100%' }} min={0} />
+          </Form.Item>
+
+          <Form.Item name="totalAmount" label="Total Amount" rules={[{ required: true, message: 'Please enter total amount' }]}>
+            <InputNumber style={{ width: '100%' }} min={0} />
+          </Form.Item>
+
+          <Form.Item name="dealerId" label="Dealer ID">
+            <Input />
+          </Form.Item>
+
+          <Form.Item name="paymentMethodId" label="Payment Method ID">
+            <InputNumber style={{ width: '100%' }} min={0} />
+          </Form.Item>
+
+          <Form.Item name="paymentStatus" label="Payment Status">
+            <Input />
+          </Form.Item>
+
+          <Form.Item>
+            <Space>
+              <Button onClick={() => { setIsModalVisible(false); form.resetFields(); }}>Cancel</Button>
+              <Button type="primary" htmlType="submit" loading={creating}>Create</Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Modal>
     </>
   );
 };
