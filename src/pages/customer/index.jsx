@@ -15,8 +15,17 @@ import {
   Select,
 } from "antd";
 import api from "../../config/axios";
+import { useSelector } from "react-redux";
+import { ROLES } from "../../components/auth/roles";
 
 const Customer = () => {
+  const account = useSelector((s) => s.account);
+  const role = account?.role;
+  const canManageCustomers =
+    role === ROLES.DEALER_MANAGER ||
+    role === ROLES.DEALER_STAFF ||
+    role === ROLES.ADMIN;
+  const canCreateContract = canManageCustomers;
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
@@ -122,12 +131,19 @@ const Customer = () => {
       key: "actions",
       render: (_, record) => (
         <Space>
-          <Button type="link" onClick={() => handleOpenEdit(record)}>
-            Edit
-          </Button>
-          <Button type="primary" onClick={() => handleOpenCreateContract(record)}>
-            Create Contract
-          </Button>
+          {canManageCustomers && (
+            <Button type="link" onClick={() => handleOpenEdit(record)}>
+              Edit
+            </Button>
+          )}
+          {canCreateContract && (
+            <Button
+              type="primary"
+              onClick={() => handleOpenCreateContract(record)}
+            >
+              Create Contract
+            </Button>
+          )}
         </Space>
       ),
     },
@@ -178,9 +194,9 @@ const Customer = () => {
         vehicleId: values.vehicleId || "",
         // AntD DatePicker provides a Dayjs-like object; convert to ISO string. If missing, default to now.
         contractDate: values.contractDate
-          ? (values.contractDate?.toDate
+          ? values.contractDate?.toDate
             ? values.contractDate.toDate().toISOString()
-            : new Date(values.contractDate).toISOString())
+            : new Date(values.contractDate).toISOString()
           : new Date().toISOString(),
         promotionAmount: Number(values.promotionAmount || 0),
         totalAmount: Number(values.totalAmount || 0),
@@ -193,7 +209,8 @@ const Customer = () => {
       let res;
       try {
         res = await api.post("/sale-contracts", payload);
-      } catch (e1) {
+      } catch {
+        // Fallback when /sale-contracts fails (network/404/etc.)
         res = await api.post("/contracts", payload);
       }
 
@@ -210,7 +227,10 @@ const Customer = () => {
       if (err && err.errorFields) {
         // Form validation error: keep modal open so user can fix inputs
       } else {
-        const msg = err?.response?.data?.message || err?.message || "Create contract failed";
+        const msg =
+          err?.response?.data?.message ||
+          err?.message ||
+          "Create contract failed";
         message.error(msg);
       }
     } finally {
@@ -312,9 +332,11 @@ const Customer = () => {
           style={{ width: 360 }}
         />
         <Button onClick={() => setSearchText("")}>Reset</Button>
-        <Button type="primary" onClick={handleOpenAdd}>
-          Add Customer
-        </Button>
+        {canManageCustomers && (
+          <Button type="primary" onClick={handleOpenAdd}>
+            Add Customer
+          </Button>
+        )}
       </Space>
 
       <Table

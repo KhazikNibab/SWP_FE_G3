@@ -46,7 +46,7 @@ const AccountManagementPage = () => {
         return;
       }
       setAccounts(data);
-      console.log(res.data)
+      console.log(res.data);
     } catch (err) {
       console.error("Failed to fetch accounts", err);
       message.error("Failed to load accounts");

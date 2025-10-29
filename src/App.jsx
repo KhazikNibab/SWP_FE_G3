@@ -20,6 +20,9 @@ import AccountManagementPage from "./pages/account";
 import ManageCar from "./pages/car";
 import Contract from "./pages/contract";
 import Customer from "./pages/customer";
+import TestDrivePage from "./pages/testDrive";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
+import { ROUTE_ACCESS } from "./components/auth/roles";
 
 function App() {
   const router = createBrowserRouter([
@@ -33,23 +36,57 @@ function App() {
         { index: true, element: <Navigate to="car" replace /> },
         {
           path: "car",
-          element: <ManageCar />, //outlet
+          element: (
+            <ProtectedRoute
+              allowedRoles={ROUTE_ACCESS.car}
+              element={<ManageCar />}
+            />
+          ), //outlet
         },
         {
           path: "category",
-          element: <ManageCategory />, //outlet
+          element: (
+            <ProtectedRoute
+              allowedRoles={ROUTE_ACCESS.category}
+              element={<ManageCategory />}
+            />
+          ), //outlet
         },
         {
           path: "contract",
-          element: <Contract />, // Contract management
+          element: (
+            <ProtectedRoute
+              allowedRoles={ROUTE_ACCESS.contract}
+              element={<Contract />}
+            />
+          ), // Contract management
         },
         {
           path: "accounts",
-          element: <AccountManagementPage />, // Admin account management
+          element: (
+            <ProtectedRoute
+              allowedRoles={ROUTE_ACCESS.accounts}
+              element={<AccountManagementPage />}
+            />
+          ), // Admin account management
         },
         {
           path: "customer",
-          element: <Customer />, //for dealer staff
+          element: (
+            <ProtectedRoute
+              allowedRoles={ROUTE_ACCESS.customer}
+              element={<Customer />}
+            />
+          ), //for dealer staff
+        },
+        {
+          path: "testDrive",
+          element: (
+            <ProtectedRoute
+              allowedRoles={ROUTE_ACCESS.testDrive}
+              element={<TestDrivePage />}
+            />
+          ),
         },
       ],
     },

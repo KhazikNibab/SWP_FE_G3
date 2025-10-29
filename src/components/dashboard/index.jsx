@@ -9,6 +9,7 @@ import { Breadcrumb, Layout, Menu, theme, Button, Tooltip } from "antd";
 import { Link, Outlet, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { logout } from "../../redux/accountSlice";
+import { ROUTE_ACCESS, hasAccess } from "../auth/roles";
 const { Header, Content, Footer, Sider } = Layout;
 // Helper to create menu items. We intentionally use relative route paths
 // (no leading slash) for `to` so that the links are resolved relative to
@@ -35,16 +36,22 @@ function getItem(label, key, icon, children) {
 // Build menu items based on role. ADMIN sees an additional "Manage Accounts".
 function useMenuItems(role) {
   return useMemo(() => {
-    const base = [
-      getItem("Manage Car", "car", <PieChartOutlined />),
-      getItem("Manage Category", "category", <PieChartOutlined />),
-      getItem("Manage Contract", "contract", <FileTextOutlined />),
-      getItem("Manage Customers", "customer", <FileTextOutlined />),
-    ];
-    if (role === "ADMIN") {
-      base.push(getItem("Manage Accounts", "accounts", <TeamOutlined />));
-    }
-    return base;
+    const items = [];
+    if (hasAccess(role, ROUTE_ACCESS.car))
+      items.push(getItem("Manage Car", "car", <PieChartOutlined />));
+    if (hasAccess(role, ROUTE_ACCESS.category))
+      items.push(getItem("Manage Category", "category", <PieChartOutlined />));
+    if (hasAccess(role, ROUTE_ACCESS.contract))
+      items.push(getItem("Manage Contract", "contract", <FileTextOutlined />));
+    if (hasAccess(role, ROUTE_ACCESS.customer))
+      items.push(getItem("Manage Customers", "customer", <FileTextOutlined />));
+    if (hasAccess(role, ROUTE_ACCESS.testDrive))
+      items.push(
+        getItem("Manage TestDrive", "testDrive", <FileTextOutlined />)
+      );
+    if (hasAccess(role, ROUTE_ACCESS.accounts))
+      items.push(getItem("Manage Accounts", "accounts", <TeamOutlined />));
+    return items;
   }, [role]);
 }
 const Dashboard = () => {

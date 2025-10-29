@@ -1,9 +1,28 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Table, Input, Space, Button, message, Modal, Form, Select, DatePicker, InputNumber } from "antd";
+import {
+  Table,
+  Input,
+  Space,
+  Button,
+  message,
+  Modal,
+  Form,
+  Select,
+  DatePicker,
+  InputNumber,
+} from "antd";
+import { useSelector } from "react-redux";
+import { ROLES } from "../../components/auth/roles";
 import api from "../../config/axios";
 
 // Contract management table — mirrors the Car table behavior but for contracts
 const Contract = () => {
+  const account = useSelector((s) => s.account);
+  const role = account?.role;
+  const canCreateContract =
+    role === ROLES.ADMIN ||
+    role === ROLES.DEALER_MANAGER ||
+    role === ROLES.DEALER_STAFF;
   // Data state
   const [contracts, setContracts] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -81,13 +100,9 @@ const Contract = () => {
     const q = searchText.trim().toLowerCase();
     return (contracts || []).filter((c) => {
       const matchSearch = q
-        ? [
-          c.id,
-          c.customerName,
-          c.vehicleModel,
-        ]
-          .map((v) => String(v || "").toLowerCase())
-          .some((v) => v.includes(q))
+        ? [c.id, c.customerName, c.vehicleModel]
+            .map((v) => String(v || "").toLowerCase())
+            .some((v) => v.includes(q))
         : true;
       const matchStatus = paymentStatus
         ? c.paymentStatus === paymentStatus
@@ -140,15 +155,21 @@ const Contract = () => {
       sorter: (a, b) => (a.totalAmount || 0) - (b.totalAmount || 0),
       render: (v) => currency(v),
     },
-    { title: "Payment Status", dataIndex: "paymentStatus", key: "paymentStatus" },
+    {
+      title: "Payment Status",
+      dataIndex: "paymentStatus",
+      key: "paymentStatus",
+    },
   ];
 
   return (
     <>
       <Space style={{ marginBottom: 16 }} wrap>
-        <Button type="primary" onClick={() => setIsModalVisible(true)}>
-          Create Contract
-        </Button>
+        {canCreateContract && (
+          <Button type="primary" onClick={() => setIsModalVisible(true)}>
+            Create Contract
+          </Button>
+        )}
         <Input.Search
           allowClear
           placeholder="Search by ID, customer, or vehicle"
@@ -197,52 +218,63 @@ const Contract = () => {
         }}
         footer={null}
       >
-        <Form form={form} layout="vertical" onFinish={async (values) => {
-          setCreating(true);
-          try {
-            // normalize date
-            let contractDate = values.contractDate;
-            if (contractDate) {
-              // moment or Date
-              contractDate = contractDate.toISOString ? contractDate.toISOString() : new Date(contractDate).toISOString();
-            }
-
-            const payload = {
-              customerName: values.customerName,
-              customerPhone: values.customerPhone,
-              customerEmail: values.customerEmail,
-              vehicleId: values.vehicleId,
-              contractDate: contractDate,
-              promotionAmount: Number(values.promotionAmount) || 0,
-              totalAmount: Number(values.totalAmount) || 0,
-              dealerId: values.dealerId,
-              paymentMethodId: Number(values.paymentMethodId) || 0,
-              paymentStatus: values.paymentStatus,
-            };
-
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={async (values) => {
+            setCreating(true);
             try {
-              await api.post('/sale-contracts', payload);
-            } catch (e) {
-              await api.post('/contracts', payload);
-            }
+              // normalize date
+              let contractDate = values.contractDate;
+              if (contractDate) {
+                // moment or Date
+                contractDate = contractDate.toISOString
+                  ? contractDate.toISOString()
+                  : new Date(contractDate).toISOString();
+              }
 
-            message.success('Contract created');
-            setIsModalVisible(false);
-            form.resetFields();
-            fetchContracts();
-          } catch (err) {
-            console.error(err);
-            message.error('Failed to create contract');
-          } finally {
-            setCreating(false);
-          }
-        }}>
+              const payload = {
+                customerName: values.customerName,
+                customerPhone: values.customerPhone,
+                customerEmail: values.customerEmail,
+                vehicleId: values.vehicleId,
+                contractDate: contractDate,
+                promotionAmount: Number(values.promotionAmount) || 0,
+                totalAmount: Number(values.totalAmount) || 0,
+                dealerId: values.dealerId,
+                paymentMethodId: Number(values.paymentMethodId) || 0,
+                paymentStatus: values.paymentStatus,
+              };
+
+              try {
+                await api.post("/sale-contracts", payload);
+              } catch {
+                await api.post("/contracts", payload);
+              }
+
+              message.success("Contract created");
+              setIsModalVisible(false);
+              form.resetFields();
+              fetchContracts();
+            } catch (err) {
+              console.error(err);
+              message.error("Failed to create contract");
+            } finally {
+              setCreating(false);
+            }
+          }}
+        >
           <Form.Item name="customerId" label="Select Customer">
             <Select
               placeholder="Choose a customer"
-              options={(customers || []).map(c => ({ value: c.id, label: c.customerName || c.name || c.email }))}
+              options={(customers || []).map((c) => ({
+                value: c.id,
+                label: c.customerName || c.name || c.email,
+              }))}
               onChange={(val) => {
-                const c = (customers || []).find(x => String(x.id) === String(val));
+                const c = (customers || []).find(
+                  (x) => String(x.id) === String(val)
+                );
                 if (c) {
                   form.setFieldsValue({
                     customerName: c.customerName || c.name || "",
@@ -264,20 +296,32 @@ const Contract = () => {
             <Input disabled />
           </Form.Item>
 
-          <Form.Item name="vehicleId" label="Vehicle ID" rules={[{ required: true, message: 'Please enter vehicle id' }]}>
+          <Form.Item
+            name="vehicleId"
+            label="Vehicle ID"
+            rules={[{ required: true, message: "Please enter vehicle id" }]}
+          >
             <Input />
           </Form.Item>
 
-          <Form.Item name="contractDate" label="Contract Date" rules={[{ required: true, message: 'Please select a date' }]}>
-            <DatePicker style={{ width: '100%' }} />
+          <Form.Item
+            name="contractDate"
+            label="Contract Date"
+            rules={[{ required: true, message: "Please select a date" }]}
+          >
+            <DatePicker style={{ width: "100%" }} />
           </Form.Item>
 
           <Form.Item name="promotionAmount" label="Promotion Amount">
-            <InputNumber style={{ width: '100%' }} min={0} />
+            <InputNumber style={{ width: "100%" }} min={0} />
           </Form.Item>
 
-          <Form.Item name="totalAmount" label="Total Amount" rules={[{ required: true, message: 'Please enter total amount' }]}>
-            <InputNumber style={{ width: '100%' }} min={0} />
+          <Form.Item
+            name="totalAmount"
+            label="Total Amount"
+            rules={[{ required: true, message: "Please enter total amount" }]}
+          >
+            <InputNumber style={{ width: "100%" }} min={0} />
           </Form.Item>
 
           <Form.Item name="dealerId" label="Dealer ID">
@@ -285,7 +329,7 @@ const Contract = () => {
           </Form.Item>
 
           <Form.Item name="paymentMethodId" label="Payment Method ID">
-            <InputNumber style={{ width: '100%' }} min={0} />
+            <InputNumber style={{ width: "100%" }} min={0} />
           </Form.Item>
 
           <Form.Item name="paymentStatus" label="Payment Status">
@@ -294,8 +338,17 @@ const Contract = () => {
 
           <Form.Item>
             <Space>
-              <Button onClick={() => { setIsModalVisible(false); form.resetFields(); }}>Cancel</Button>
-              <Button type="primary" htmlType="submit" loading={creating}>Create</Button>
+              <Button
+                onClick={() => {
+                  setIsModalVisible(false);
+                  form.resetFields();
+                }}
+              >
+                Cancel
+              </Button>
+              <Button type="primary" htmlType="submit" loading={creating}>
+                Create
+              </Button>
             </Space>
           </Form.Item>
         </Form>
